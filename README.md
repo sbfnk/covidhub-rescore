@@ -15,9 +15,9 @@ Score with `scoringutils::score()` on a `forecast_quantile` object (default `cou
 ## Run
 
 ```r
-install.packages(c("data.table", "scoringutils", "ggplot2", "scales"))
+install.packages(c("data.table", "scoringutils", "ggplot2", "scales", "here"))
 ```
 ```sh
-Rscript src/score.R     # writes output/wis_scores.csv, output/comparison_with_aygun.csv
-Rscript src/heatmap.R   # writes output/heatmap.{png,pdf}
+Rscript R/score.R     # writes output/wis_scores.csv, output/comparison_with_aygun.csv
+Rscript R/heatmap.R   # writes output/heatmap.{png,pdf}
 ```
