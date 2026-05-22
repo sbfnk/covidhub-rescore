@@ -49,7 +49,7 @@ p <- ggplot(scores2,
                expand = expansion(mult = c(0.01, 0.01))) +
   labs(
     title = "CovidHub model WIS by reference date (2024/25 season)",
-    subtitle = "Scored against CovidHub target-data commit 674471b (2025-04-30, the closest commit to the paper's 2025-05-01 cutoff); missing truth values imputed to zero per the paper's stated methodology.",
+    subtitle = "Scored against CovidHub target-data commit 674471b (2025-04-30, closest to the paper's 2025-05-01 cutoff). Forecast-target tuples past 2025-04-26 are absent from the snapshot and shown as blank cells.",
     x = NULL, y = NULL
   ) +
   theme_minimal(base_size = 10) +

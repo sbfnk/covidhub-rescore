@@ -103,10 +103,13 @@ score_one_model <- function(model) {
            location %in% FIPS_52]
   if (nrow(fc) == 0) return(NULL)
 
-  # Each row = one quantile prediction. Need observed for that (location,
-  # target_end_date). Missing observed -> 0 per paper.
-  d <- merge(fc, truth, by = c("location", "target_end_date"), all.x = TRUE)
-  d[is.na(observed), observed := 0]
+  # Each row = one quantile prediction. The paper says "missing values in
+  # the dataset were replaced by zeros". The 2025-04-30 snapshot has no NaN
+  # cells inside its observed range, so that rule has no effect on the
+  # truth values it does contain; forecast-target tuples whose target_end_date
+  # falls past the snapshot's last observed week (2025-04-26) are not "in
+  # the dataset" at all and are dropped here.
+  d <- merge(fc, truth, by = c("location", "target_end_date"))
 
   fcq <- as_forecast_quantile(
     d[, .(reference_date, horizon, location, target_end_date,
@@ -149,17 +152,23 @@ aygun <- data.table(
 ours_wide <- dcast(per_cell[model %in% c("CovidHub-ensemble",
                                           "UMass-ar6_pooled")],
                    reference_date ~ model, value.var = "mean_wis")
-cmp <- merge(aygun, ours_wide, by = "reference_date", suffixes = c("_aygun", "_ours"))
+cmp <- merge(aygun, ours_wide, by = "reference_date",
+             suffixes = c("_aygun", "_ours"), all.x = TRUE)
 fwrite(cmp, file.path(OUT_DIR, "comparison_with_aygun.csv"))
 message("Wrote ", file.path(OUT_DIR, "comparison_with_aygun.csv"))
 
 if ("CovidHub-ensemble_ours" %in% names(cmp)) {
-  message("\nReplication summary (paper-as-written, zero-imputed truth):")
-  message(sprintf("  Aygün CovidHub-ensemble row mean (27 cells, Fig 3b): %.2f (paper: 29)",
-                  mean(cmp$`CovidHub-ensemble_aygun`)))
-  message(sprintf("  Our replication mean (27 cells):                       %.2f",
-                  mean(cmp$`CovidHub-ensemble_ours`)))
-  message(sprintf("  Sum_abs_diff across 27 cells:                          %.1f",
-                  sum(abs(cmp$`CovidHub-ensemble_aygun` -
-                          cmp$`CovidHub-ensemble_ours`))))
+  scorable <- cmp[!is.na(`CovidHub-ensemble_ours`)]
+  message("\nReplication summary (paper-as-written, snapshot has no NaN, drop targets past snapshot):")
+  message(sprintf("  Reference dates with at least one scorable horizon: %d (of 27)",
+                  nrow(scorable)))
+  message(sprintf("  Aygün CovidHub-ensemble row mean over those %d cells:  %.2f",
+                  nrow(scorable), mean(scorable$`CovidHub-ensemble_aygun`)))
+  message(sprintf("  Our replication mean over those %d cells:             %.2f",
+                  nrow(scorable), mean(scorable$`CovidHub-ensemble_ours`)))
+  message(sprintf("  Sum_abs_diff across %d cells:                         %.2f",
+                  nrow(scorable), sum(abs(scorable$`CovidHub-ensemble_aygun` -
+                                          scorable$`CovidHub-ensemble_ours`))))
+  message(sprintf("  Reference dates Aygün scores but we cannot (target past 2025-04-26): %d",
+                  sum(is.na(cmp$`CovidHub-ensemble_ours`))))
 }
